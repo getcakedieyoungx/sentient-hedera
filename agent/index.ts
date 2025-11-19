@@ -1,0 +1,94 @@
+import { Client, ContractId, ContractFunctionParameters, AccountId, PrivateKey, ContractCallQuery, ContractExecuteTransaction } from "@hashgraph/sdk";
+import { OpenAI } from "openai";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+// Configuration
+const OPERATOR_ID = AccountId.fromString(process.env.HEDERA_ACCOUNT_ID!);
+const OPERATOR_KEY = PrivateKey.fromString(process.env.HEDERA_PRIVATE_KEY!);
+const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!; // Will be set after deployment
+
+// Initialize Hedera Client
+const client = Client.forTestnet();
+client.setOperator(OPERATOR_ID, OPERATOR_KEY);
+
+// Initialize OpenAI
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+console.log(`[Agent] 🤖 Sentient Agent v1.0 Online`);
+console.log(`[Agent] 🆔 Wallet: ${OPERATOR_ID}`);
+console.log(`[Agent] 📡 Listening for jobs on Contract: ${CONTRACT_ID}...`);
+
+async function main() {
+    // Poll for events (Simple polling for MVP, Mirror Node is better for prod)
+    // In a real hackathon, we might use a Mirror Node API to fetch logs.
+    // For simplicity, we will assume we are checking the contract state or listening to a Mirror Node stream.
+
+    // MOCK LISTENER LOOP (Replace with Mirror Node API in production)
+    // We will use a simple loop to check the "jobCounter" and see if there are new jobs.
+
+    let lastCheckedJobId = 0;
+
+    setInterval(async () => {
+        try {
+            // 1. Get current job count
+            // Note: This is a read-only call, free on Hedera? No, minimal cost. 
+            // Better to use Mirror Node. But for this script, let's just simulate the "Event" arrival 
+            // or use a direct query if the user prefers.
+
+            // ACTUALLY, let's use the Mirror Node REST API to find events.
+            // Fetch logs for the contract.
+            const url = `https://testnet.mirrornode.hedera.com/api/v1/contracts/${CONTRACT_ID}/results/logs?order=desc&limit=1`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.logs && data.logs.length > 0) {
+                const log = data.logs[0];
+                // Parse log data (Hex to Decimal) to get Job ID
+                // This is complex to parse raw hex without ABI.
+                // Let's assume we get the Job ID.
+
+                // ... Logic to parse ...
+
+                console.log(`[Agent] 🔎 Checking for new jobs...`);
+            }
+
+        } catch (error) {
+            console.error("Polling error:", error);
+        }
+    }, 5000);
+}
+
+// --- SIMULATION MODE FOR DEMO ---
+// Since Mirror Node parsing is tricky in raw JS without ABI decoder, 
+// we will create a function that "Simulates" receiving a job for the demo script.
+
+async function processJob(jobId: number, taskData: string) {
+    console.log(`[Agent] ⚡ New Job Detected! ID: ${jobId}`);
+    console.log(`[Agent] 📝 Task: "${taskData}"`);
+
+    // 1. AI Inference
+    console.log(`[Agent] 🧠 Processing with OpenAI...`);
+    const completion = await openai.chat.completions.create({
+        messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: taskData }],
+        model: "gpt-3.5-turbo",
+    });
+    const result = completion.choices[0].message.content || "No result";
+    console.log(`[Agent] ✅ Result: "${result.substring(0, 50)}..."`);
+
+    // 2. Submit to Chain
+    console.log(`[Agent] 💸 Submitting result to claim bounty...`);
+    const tx = new ContractExecuteTransaction()
+        .setContractId(CONTRACT_ID)
+        .setGas(1000000)
+        .setFunction("submitWork", new ContractFunctionParameters().addUint256(jobId).addString(result));
+
+    const submitTx = await tx.execute(client);
+    const receipt = await submitTx.getReceipt(client);
+
+    console.log(`[Agent] 🏆 Success! Transaction Status: ${receipt.status}`);
+}
+
+// Export for testing
+export { processJob };

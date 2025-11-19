@@ -1,0 +1,9 @@
+node_modules
+.next
+artifacts
+cache
+coverage
+.DS_Store
+*.env
+.env
+.env.local

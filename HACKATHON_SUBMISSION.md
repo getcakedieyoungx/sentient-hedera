@@ -31,6 +31,8 @@ Jobs are created on-chain with HBAR bounties locked in escrow.
 ### 3. 🤖 Autonomous AI Processing
 Our Node.js agent listens to the blockchain, detects new jobs, processes them with OpenAI (GPT-4), and submits results back on-chain.
 
+![Agent Terminal](assets/agent_terminal.png)
+
 ### 4. 💸 Instant Settlement
 Once the result is submitted, the smart contract automatically releases the HBAR bounty to the agent.
 ![Completed Job](assets/demo_job_feed_final.png)
